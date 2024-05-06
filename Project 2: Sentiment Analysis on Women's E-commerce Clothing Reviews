@@ -316,3 +316,135 @@ plt.show()
 
 #6.Countvectorizer
 
+# Convert each list of tokens back into a sentence
+lemmatized_sentences = [' '.join(tokens) for tokens in lemma_review]
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+
+y = data['Sentiment Category'].values
+
+# Split dataset into training and testing sets
+X_train_cv, X_test_cv, y_train, y_test = train_test_split(lemmatized_sentences, y, test_size=0.2, random_state=42)
+
+def extract_ngrams(data, ngram_range=(1, 1)):
+    vectorizer = CountVectorizer(
+        ngram_range=ngram_range,
+        max_features=1000,
+        min_df=10,
+        max_df=0.8
+    )
+
+    # The CountVectorizer fit_transform method expects raw text data,
+    # since the data is already preprocessed and tokenized, we can use it directly.
+    X = vectorizer.fit_transform(data)
+
+    return X, vectorizer
+
+# Now, we will extract n-grams from the training data
+train_vec, train_bow = extract_ngrams(X_train_cv, ngram_range=(1, 3))
+
+# And transform our test data using the same vectorizer
+test_vec = train_bow.transform(X_test_cv)
+
+# 7.TF-IDF
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+# Split your dataset into training and testing sets
+X_train_tf, X_test_tf, y_train, y_test = train_test_split(lemmatized_sentences, y, test_size=0.2, random_state=42)
+
+def extract_ngrams(data, ngram_range=(1, 1), max_features=1000):
+    tfidf = TfidfVectorizer(
+        ngram_range=ngram_range,
+        max_features=max_features,
+        preprocessor=None,
+        tokenizer=None,
+        min_df=10,
+        max_df=0.8
+    )
+
+    # The TfidfVectorizer fit_transform method expects raw text data,
+    # since the data is already preprocessed and tokenized, we can use it directly.
+    X = tfidf.fit_transform(data)
+
+    return X, tfidf
+
+# Apply TF-IDF to train data
+train_vecs, train_tfidf = extract_ngrams(X_train_tf, ngram_range=(1, 3))
+
+# Transform the test data using the same TF-IDF vectorizer
+test_vecs = train_tfidf.transform(X_test_tf)
+# 8.Word Embeddings
+#Let's install the sentence-transformers library which is a Python package that simplifies the process of obtaining sentence embeddings. The -U flag ensures that if the package is already installed, it's updated to the latest version. The library offers an easy and efficient way to use state-of-the-art transformer models.
+
+from IPython.display import clear_output
+
+# Install the Sentence-Transformers Library
+!pip install -U sentence-transformers
+clear_output()
+# Now let's import the SentenceTransformer class from the sentence-transformers package. This class is used to load pre-trained models and generate embeddings. The model specified by sentence-transformers/average_word_embeddings_glove.6B.300d is loaded, which uses GloVe (Global Vectors for Word Representation) embeddings with a dimensionality of 300. GloVe is an unsupervised learning algorithm for obtaining vector representations for words, trained on aggregate global word-word co-occurrence statistics from a corpus. This particular model averages GloVe word embeddings to create sentence embeddings.
+from sentence_transformers import SentenceTransformer
+
+# Load the model
+model = SentenceTransformer('sentence-transformers/average_word_embeddings_glove.6B.300d')
+
+# Generate embeddings for lemmatized sentences
+embeddings = model.encode(lemmatized_sentences)
+
+clear_output()
+print(embeddings)
+# Training a sentiment analysis model to classify reviews into positive, neutral, or negative sentiments.
+#Word Embeddings
+from sklearn.model_selection import train_test_split
+
+# Splitting the dataset
+X_train_we, X_test_we, y_train, y_test = train_test_split(embeddings, y, test_size=0.2, random_state=42)
+from sklearn.linear_model import LogisticRegression
+
+# Initialize the classifier
+clf = LogisticRegression(max_iter=1000)
+
+# Fit the classifier to the training data
+clf.fit(X_train_we, y_train)
+y_pred_class_we = clf.predict(X_test_we)
+
+# Evaluating model performance using appropriate metrics (accuracy, precision, recall, F1-Score).
+
+# Word Embeddings
+from sklearn.metrics import classification_report
+
+print(classification_report(y_test, y_pred_class_we))
+# Countvectorizer
+clf.fit(train_vec, y_train)
+y_pred_class_cv = clf.predict(test_vec)
+print(classification_report(y_test, y_pred_class_cv))
+!pip install lazypredict
+import lazypredict
+from lazypredict.Supervised import LazyClassifier
+
+# Convert csr_matrix to DataFrame
+X_train_df = pd.DataFrame(train_vec.toarray(), columns=train_bow.get_feature_names_out())
+X_test_df = pd.DataFrame(test_vec.toarray(), columns=train_bow.get_feature_names_out())
+
+clf1 = LazyClassifier(verbose=0,ignore_warnings=True, custom_metric=None)
+models, predictions = clf1.fit(X_train_df, X_test_df, y_train, y_test)
+models
+#TF-IDF
+clf.fit(train_vecs, y_train)
+y_pred_class_tf = clf.predict(test_vecs)
+print(classification_report(y_test, y_pred_class_tf))
+# Applying BERT model on raw text to compare results with word2vec model
+
+bert_model = SentenceTransformer("all-MiniLM-L6-v2")
+# Using the 'Merged Review' column directly
+raw_sentences = data['Merged Review'].tolist()
+
+raw_embeddings = model.encode(raw_sentences)
+# Split the dataset for raw text embeddings
+X_train_raw, X_test_raw, y_train, y_test = train_test_split(raw_embeddings, y, test_size=0.2, random_state=42)
+
+clf.fit(X_train_raw, y_train)
+# Predict and evaluate
+y_pred_raw = clf.predict(X_test_raw)
+print("Classification Report for Raw Text Embeddings:")
+print(classification_report(y_test, y_pred_raw))
+
