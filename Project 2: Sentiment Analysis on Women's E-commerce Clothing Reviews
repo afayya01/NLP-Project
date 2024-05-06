@@ -1,0 +1,25 @@
+# Downloading the datasets from Kaggle
+import pandas as pd
+
+file_id = '1OESF36p5R3UeMdX6TFggkdkGRlUpmJAI'
+
+# Construct the download link
+download_link = f'https://drive.google.com/uc?id={file_id}'
+
+# Read the CSV file into a DataFrame
+data = pd.read_csv(download_link)
+
+# Display the first few rows of the DataFrame
+data.info(5)
+data.head(5)
+
+
+#Exploratory Data Analysis (EDA)
+#Performing data cleaning and preprocessing (handling missing values & removing duplicates).
+
+# Display the number of duplicates and missing values before cleaning
+print("Before Cleaning:")
+print("Number of duplicates:", data.duplicated().sum())
+print("Number of missing values:")
+print(data.isnull().sum())
+
