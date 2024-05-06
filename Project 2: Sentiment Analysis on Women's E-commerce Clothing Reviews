@@ -96,3 +96,171 @@ plt.xlabel('Ratings')
 plt.ylabel('Number of Reviews')
 plt.xticks(rotation=45)
 plt.show()
+
+
+
+#Investigating the relationship between review sentiments, product recommendations, and positive feedback count.
+
+# Use TextBlob to compute sentiment scores for each review.
+from textblob import TextBlob
+
+data['Sentiment Category'] = data['Merged Review'].apply(lambda x: TextBlob(x).sentiment.polarity)
+
+# Divide sentiment scores into categories as positive, neutral, and negative based on the compound score.
+def categorize_sentiment(score):
+    if score < -0.1:
+        return 'Negative'
+    elif score > 0.1:
+        return 'Positive'
+    else:
+        return 'Neutral'
+
+data['Sentiment Category'] = data['Sentiment Category'].apply(categorize_sentiment)
+
+# Use TextBlob to compute sentiment scores for each review.
+data['Sentiment'] = data['Merged Review'].apply(lambda x: TextBlob(x).sentiment.polarity)
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Compute the correlation matrix
+correlation_matrix = data[['Sentiment', 'Recommended IND', 'Positive Feedback Count']].corr()
+
+# Create a heatmap
+plt.figure(figsize=(10, 8))
+sns.heatmap(correlation_matrix, annot=True, fmt='.2f', cmap='coolwarm', cbar=True)
+plt.title('Correlation Matrix of Review Sentiments, Recommendations, and Positive Feedback')
+plt.show()
+
+
+#Visualizing the most common words or phrases in positive and negative reviews.
+
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+
+# Concatenate all reviews in each sentiment category into single strings
+positive_reviews = ' '.join(data.loc[data['Sentiment Category'] == 'Positive', 'Merged Review'])
+negative_reviews = ' '.join(data.loc[data['Sentiment Category'] == 'Negative', 'Merged Review'])
+
+
+# Create WordCloud objects for positive and negative reviews
+wordcloud_positive = WordCloud().generate(positive_reviews)
+wordcloud_negative = WordCloud().generate(negative_reviews)
+
+# Plotting the WordClouds
+fig, axes = plt.subplots(1, 2, figsize=(20, 10))
+
+axes[0].imshow(wordcloud_positive, interpolation='bilinear')
+axes[0].axis("off")
+axes[0].set_title('Positive Reviews')
+
+axes[1].imshow(wordcloud_negative, interpolation='bilinear')
+axes[1].axis("off")
+axes[1].set_title('Negative Reviews')
+
+plt.show()
+
+#Sentiment Analysis Model
+#Preprocessing text data for model ingestion (tokenization, stop-word removal, lemmatization, word embeddings)
+#1.Uncontract the text
+
+import re
+from tqdm import tqdm
+def uncontract(text):
+    text = re.sub(r"(\b)([Aa]re|[Cc]ould|[Dd]id|[Dd]oes|[Dd]o|[Hh]ad|[Hh]as|[Hh]ave|[Ii]s|[Mm]ight|[Mm]ust|[Ss]hould|[Ww]ere|[Ww]ould)n't", r"\1\2 not", text)
+    text = re.sub(r"(\b)([Hh]e|[Ii]|[Ss]he|[Tt]hey|[Ww]e|[Ww]hat|[Ww]ho|[Yy]ou)'ll", r"\1\2 will", text)
+    text = re.sub(r"(\b)([Tt]hey|[Ww]e|[Ww]hat|[Ww]ho|[Yy]ou)'re", r"\1\2 are", text)
+    text = re.sub(r"(\b)([Ii]|[Ss]hould|[Tt]hey|[Ww]e|[Ww]hat|[Ww]ho|[Ww]ould|[Yy]ou)'ve", r"\1\2 have", text)
+
+    text = re.sub(r"(\b)([Cc]a)n't", r"\1\2n not", text)
+    text = re.sub(r"(\b)([Ii])'m", r"\1\2 am", text)
+    text = re.sub(r"(\b)([Ll]et)'s", r"\1\2 us", text)
+    text = re.sub(r"(\b)([Tt]here)'s", r"\1\2 is", text)
+    text = re.sub(r"(\b)([Ww])on't", r"\1\2ill not", text)
+    text = re.sub(r"(\b)([Ss])han't", r"\1\2hall not", text)
+    text = re.sub(r"(\b)([Yy])(?:'all|a'll)", r"\1\2ou all", text)
+
+    return text
+
+data['Merged Review'] = [uncontract(review) for review in tqdm(data['Merged Review'])]
+
+positive_reviews = data.loc[data['Sentiment Category'] == 'Positive', 'Merged Review']
+neutral_reviews = data.loc[data['Sentiment Category'] == 'Neutral', 'Merged Review']
+negative_reviews = data.loc[data['Sentiment Category'] == 'Negative', 'Merged Review']
+
+#2.Tokenization
+
+import re, string, nltk, itertools
+
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+
+# Download the necessary NLTK resources
+nltk.download("stopwords")
+nltk.download('punkt')
+
+# Tokenize the reviews in the 'Merged Review' column
+review_tokens = [word_tokenize(uncontract(review)) for review in tqdm(data['Merged Review'])]
+
+', '.join(review_tokens[100])
+
+#3.Normalization
+#Convert all the tokens to lowercase.
+
+review_clean_tokens = [[t.lower() for t in tokens] for tokens in review_tokens]
+
+', '.join(review_clean_tokens[100])
+
+#Remove all the tokens that consist only of punctiuation characters.
+no_punct = []
+
+# Create a set of all punctuation and digit characters for quick lookup
+punctuations = set(string.punctuation).union(set(string.digits))
+
+# Go through each list of tokens (each review) and filter out punctuation
+for tokens in tqdm(review_clean_tokens):
+    filtered_tokens = [t for t in tokens if not all(c in punctuations or c.isdigit() for c in t)]
+    no_punct.append(filtered_tokens)
+
+review_clean_tokens = no_punct
+
+
+#Remove Stop-Words
+
+#To remove the tokens that are stop-words, we will be using the stopwords corpora from NLTK.
+
+# Create the stop word regular expression
+stop_word_regex = '|'.join(['^{}$'.format(re.escape(s)) for s in stopwords.words('english')])
+
+# Apply the regex substitution to each token within each sublist
+review_clean_tokens = [
+    [token for token in review if not re.match(stop_word_regex, token)]
+    for review in review_clean_tokens
+]
+
+#4.POS Tagging
+from nltk import pos_tag
+from nltk.corpus import wordnet
+nltk.download('averaged_perceptron_tagger')
+
+# Function to map NLTK POS tags to WordNet POS tags
+def get_wordnet_pos(treebank_tag):
+    if treebank_tag.startswith('J'):
+        return wordnet.ADJ
+    elif treebank_tag.startswith('V'):
+        return wordnet.VERB
+    elif treebank_tag.startswith('N'):
+        return wordnet.NOUN
+    elif treebank_tag.startswith('R'):
+        return wordnet.ADV
+    else:
+        return wordnet.NOUN
+
+# Tokenize the reviews and apply POS tagging
+review_pos_tags = [pos_tag(tokens) for tokens in review_clean_tokens]
+
+5.Lemmatization
+#For lemmatization we will use the WordNetLemmatizer from the nltk.stem module.
+
+#This lemmatizer requires the wordnet and omw-1.4 corpora from NLTK.
+
