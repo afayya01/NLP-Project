@@ -23,3 +23,15 @@ print("Number of duplicates:", data.duplicated().sum())
 print("Number of missing values:")
 print(data.isnull().sum())
 
+# Fill missing titles with 'No Title'
+data['Title'].fillna('No Title', inplace=True)
+
+# Drop rows where 'Review Text' is missing
+data.dropna(subset=['Review Text'], inplace=True)
+
+# Fill missing values in 'Division Name', 'Department Name', and 'Class Name' with 'Unknown'
+data[['Division Name', 'Department Name', 'Class Name']] = data[['Division Name', 'Department Name', 'Class Name']].fillna('Unknown')
+
+# Display the number of missing values after cleaning
+print("\nAfter Cleaning - Number of missing values:")
+print(data.isnull().sum())
