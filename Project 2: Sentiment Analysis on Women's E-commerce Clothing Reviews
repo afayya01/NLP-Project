@@ -35,3 +35,64 @@ data[['Division Name', 'Department Name', 'Class Name']] = data[['Division Name'
 # Display the number of missing values after cleaning
 print("\nAfter Cleaning - Number of missing values:")
 print(data.isnull().sum())
+
+
+# Merging the "Title" and "Review Text" columns
+data['Merged Review'] = data['Title'].fillna('') + " " + data['Review Text'].fillna('')
+
+data.info(5)
+data.head(5)
+
+#Analyzing the distribution of reviews across different age groups, product categories, and ratings.
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Define age bins(intervals) and labels
+bins = [18, 25, 35, 45, 55, 65, 100]
+labels = ['18-25', '26-35', '36-45', '46-55', '56-65', '65+']
+data['Age Group'] = pd.cut(data['Age'], bins=bins, labels=labels, right=False)
+
+# Plot distribution of reviews across age groups
+plt.figure(figsize=(10, 6))
+sns.countplot(x='Age Group', data=data, order=labels)
+plt.title('Distribution of Reviews Across Age Groups')
+plt.xlabel('Age Group')
+plt.ylabel('Number of Reviews')
+plt.xticks(rotation=45)
+plt.show()
+# Plot for Division Name
+plt.figure(figsize=(10, 6))
+sns.countplot(x='Division Name', data=data)
+plt.title('Distribution of Reviews Across Divisions')
+plt.xlabel('Division')
+plt.ylabel('Number of Reviews')
+plt.xticks(rotation=45)
+plt.show()
+
+# Plot for Department Name
+plt.figure(figsize=(10, 6))
+sns.countplot(x='Department Name', data=data)
+plt.title('Distribution of Reviews Across Departments')
+plt.xlabel('Departments')
+plt.ylabel('Number of Reviews')
+plt.xticks(rotation=45)
+plt.show()
+
+# Plot for Class Name
+plt.figure(figsize=(10, 6))
+sns.countplot(x='Class Name', data=data)
+plt.title('Distribution of Reviews Across Classes')
+plt.xlabel('Classes')
+plt.ylabel('Number of Reviews')
+plt.xticks(rotation=45)
+plt.show()
+
+# Plot for Class Name
+plt.figure(figsize=(10, 6))
+sns.countplot(x='Rating', data=data)
+plt.title('Distribution of Reviews Across Ratings')
+plt.xlabel('Ratings')
+plt.ylabel('Number of Reviews')
+plt.xticks(rotation=45)
+plt.show()
