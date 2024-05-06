@@ -264,3 +264,55 @@ review_pos_tags = [pos_tag(tokens) for tokens in review_clean_tokens]
 
 #This lemmatizer requires the wordnet and omw-1.4 corpora from NLTK.
 
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+
+from nltk.stem import WordNetLemmatizer
+
+lemmatizer = WordNetLemmatizer()
+
+# Function to lemmatize each word with its POS tag
+def lemmatize_with_pos(token, pos):
+    return lemmatizer.lemmatize(token, pos=get_wordnet_pos(pos))
+
+# Lemmatize with POS tags
+lemma_review = [[lemmatize_with_pos(token, pos) for token, pos in tagged_tokens]
+                for tagged_tokens in review_pos_tags]
+
+# List of words to remove
+extra_words = {"dress", "sweater", "color", "fabric", "size", "order", "look", "wear"}
+
+# Remove unwanted words after lemmatization
+lemma_review = [[token for token in review if token.lower() not in extra_words]
+                         for review in lemma_review]
+
+# Recreate a DataFrame with the filtered lemmatized reviews and the sentiment categories
+filtered_data = pd.DataFrame({
+    'Lemmatized Review': [' '.join(review) for review in lemma_review],
+    'Sentiment Category': data['Sentiment Category']
+})
+
+# Concatenate all filtered lemmatized reviews in each sentiment category into single strings
+positive_reviews_filtered = ' '.join(filtered_data.loc[filtered_data['Sentiment Category'] == 'Positive', 'Lemmatized Review'])
+negative_reviews_filtered = ' '.join(filtered_data.loc[filtered_data['Sentiment Category'] == 'Negative', 'Lemmatized Review'])
+
+# Create WordCloud objects for positive and negative reviews
+wordcloud_positive_filtered = WordCloud().generate(positive_reviews_filtered)
+wordcloud_negative_filtered = WordCloud().generate(negative_reviews_filtered)
+
+# Plotting the WordClouds
+fig, axes = plt.subplots(1, 2, figsize=(20, 10))
+
+axes[0].imshow(wordcloud_positive_filtered, interpolation='bilinear')
+axes[0].axis("off")
+axes[0].set_title('Positive Reviews (Filtered)')
+
+axes[1].imshow(wordcloud_negative_filtered, interpolation='bilinear')
+axes[1].axis("off")
+axes[1].set_title('Negative Reviews (Filtered)')
+
+plt.show()
+
+
+#6.Countvectorizer
+
